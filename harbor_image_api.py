@@ -3,8 +3,37 @@ import requests
 import os
 from requests.auth import HTTPBasicAuth
 from urllib.parse import quote_plus # For URL encoding repository names
+import logging
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
+
+# --- Logging Setup ---
+def setup_logging(application):
+    # Remove default Flask handlers
+    for handler in list(application.logger.handlers):
+        application.logger.removeHandler(handler)
+    
+    # Configure RotatingFileHandler
+    log_file = 'harbor_api.log'
+    # Max 10 MB per file, keep 3 backup logs (harbor_api.log.1, harbor_api.log.2, harbor_api.log.3)
+    file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=3)
+    
+    # Log format
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+    )
+    file_handler.setFormatter(formatter)
+    
+    # Set log level for the handler and the app logger
+    file_handler.setLevel(logging.INFO)
+    application.logger.addHandler(file_handler)
+    application.logger.setLevel(logging.INFO)
+    application.logger.info('Rotating Log Handler configured for Harbor API.')
+
+setup_logging(app)
+# --- End Logging Setup ---
 
 # Configuration from environment variables or defaults
 HARBOR_URL = os.environ.get("HARBOR_URL", "https://k8s-gpu-worker-node:9443").rstrip('/')
