@@ -1,0 +1,12 @@
+{
+    "ignore_file_path": "images_to_ignore.txt",
+    "log_file": "crictl_api.log",
+    "log_max_bytes": 10485760,
+    "log_backup_count": 3,
+    "app_host": "0.0.0.0",
+    "app_port": 5675,
+    "app_debug": false,
+    "file_handler_log_level": "WARNING", 
+    "app_log_level": "WARNING",
+    "jsonify_prettyprint_regular": true
+} 

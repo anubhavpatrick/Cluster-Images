@@ -1,0 +1,54 @@
+[Unit]
+Description=Gunicorn instance to serve Flask Image API
+After=network.target 
+# Ensures network is up before starting
+
+[Service]
+# User and Group that will run the Gunicorn process
+# It's good practice to create a dedicated user/group for your application
+# rather than running as root, unless absolutely necessary for crictl permissions
+# that cannot be handled by specific sudoers rules.
+User=root  
+# CHANGE THIS: Replace with a less privileged user if possible (e.g., 'your_service_user')
+Group=root 
+# CHANGE THIS: Replace with the group of the user (e.g., 'your_service_group')
+
+# Working directory for the Gunicorn process
+# This should be the root directory of your Flask project
+WorkingDirectory=/root/container-images/
+
+# Explicitly set PYTHONPATH (still good to keep, though the name mismatch was primary)
+Environment="PYTHONPATH=/root/container-images"
+
+# Path to the Gunicorn executable within your virtual environment
+# and the command to start Gunicorn
+# Adjust --workers as needed.
+# Bind to 127.0.0.1:5675 if you plan to use a reverse proxy like Nginx.
+# If Gunicorn should be directly accessible on all interfaces, keep 0.0.0.0.
+ExecStart=/root/container-images/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5675 images_api:app
+
+# Optional: If your virtual environment isn't activated by ExecStart directly,
+# or if Gunicorn/Python needs other environment variables.
+# Environment="PATH=/root/container-images/venv/bin"
+
+# Restart policy
+Restart=always
+RestartSec=3 
+# Restart after 3 seconds if it fails
+
+
+# Standard output and error logging
+# By default, these will go to the systemd journal (viewable with journalctl)
+StandardOutput=journal
+StandardError=journal
+
+# Ensure the service has access to run 'sudo crictl images' if you haven't
+# configured passwordless sudo for the *specific command* for the 'User' above.
+# If 'User' is 'root', this is implicitly allowed. If 'User' is not 'root',
+# you MUST have a sudoers rule like:
+# your_service_user ALL=(ALL) NOPASSWD: /usr/bin/crictl images (or wherever crictl is)
+# This is critical for the 'sudo crictl images' call in your Python script.
+
+[Install]
+WantedBy=multi-user.target 
+# Start the service at multi-user runlevel (standard boot)
