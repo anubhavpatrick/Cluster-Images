@@ -95,20 +95,6 @@ some/repo,latest,abcdef123456,100MB
 ```
 Any image whose ID matches an ID in this file will be excluded from the API results.
 
-### 6. Secure `sudo crictl` Access
-
-The application uses `sudo crictl images`. For production, the user running the application service must be able to run this specific command without a password.
-
--   **Create a dedicated service user (recommended)**:
-    ```bash
-    sudo adduser --system --group imageapiuser 
-    ```
--   **Grant passwordless sudo for the specific command**:
-    Edit the sudoers file using `sudo visudo`. Add the following line (replace `imageapiuser` if you used a different username, and verify the path to `crictl` using `which crictl`):
-    ```
-    imageapiuser ALL=(ALL) NOPASSWD: /usr/bin/crictl images
-    ```
-    If you choose to run the service as `root` (not recommended for general best practices), this step can be skipped but be aware of the security implications.
 
 ## Running the Application
 
@@ -150,62 +136,19 @@ For production, use a WSGI server like Gunicorn.
 
 To ensure the application runs on boot and is managed as a system service:
 
-1.  **Create the `systemd` service file**:
+1.  **Copy the `image_api.service` service file to the following directory and provide execution permission**:
     ```bash
-    sudo nano /etc/systemd/system/image_api.service
+    sudo nano /etc/systemd/system/
     ```
 
-2.  **Paste the following configuration into the file**.
-    **Important**:
-    -   Replace `User` and `Group` with the dedicated service user you created (e.g., `imageapiuser`), or use `root` if you understand the implications and have configured `sudo crictl` accordingly.
-    -   Verify all paths (`WorkingDirectory`, `ExecStart`, `Environment`).
-
-    ```ini
-    [Unit]
-    Description=Gunicorn instance to serve Flask Image API
-    # Ensures network is up before starting
-    After=network.target
-
-    [Service]
-    # User and Group that will run the Gunicorn process
-    # CHANGE THESE to your dedicated service user if you created one
-    User=root 
-    Group=root
-
-    # Working directory for the Gunicorn process
-    WorkingDirectory=/path/to/your/Cluster-Images
-
-    # Explicitly set PYTHONPATH for the application module
-    Environment="PYTHONPATH=/path/to/your/Cluster-Images"
-
-    # Path to the Gunicorn executable within your virtual environment
-    # and the command to start Gunicorn.
-    # Adjust --workers and port as needed.
-    ExecStart=/path/to/your/Cluster-Images/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:5675 images_api:app
-
-    # Restart policy
-    Restart=always
-    # Restart after 3 seconds if it fails
-    RestartSec=3
-
-    # Standard output and error logging to systemd journal
-    StandardOutput=journal
-    StandardError=journal
-
-    [Install]
-    # Start the service at multi-user runlevel (standard boot)
-    WantedBy=multi-user.target
-    ```
-    *Replace `/path/to/your/Cluster-Images` with the actual absolute path to your project directory.*
-
-3.  **Reload `systemd`, Enable, and Start the Service**:
+2.  **Reload `systemd`, Enable, and Start the Service**:
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable image_api.service
     sudo systemctl start image_api.service
     ```
 
-4.  **Check Service Status and Logs**:
+3.  **Check Service Status and Logs**:
     ```bash
     sudo systemctl status image_api.service
     sudo journalctl -u image_api.service # To view logs
