@@ -42,6 +42,7 @@ HARBOR_PASSWORD = os.environ.get("HARBOR_PASSWORD", "Test@123")
 # For local/internal Harbor instances that might use self-signed certificates
 HARBOR_VERIFY_SSL = os.environ.get("HARBOR_VERIFY_SSL", "false").lower() == "true"
 
+
 def get_harbor_paginated_results(url, auth, params=None):
     """
     Fetches all results from a paginated Harbor API endpoint.
@@ -78,6 +79,7 @@ def get_harbor_paginated_results(url, auth, params=None):
             app.logger.error(f"JSON decoding error from {url}: {e} - Response: {response.text[:200]}")
             raise
     return results
+
 
 @app.route('/harbor-images', methods=['GET'])
 def get_harbor_images():
@@ -170,7 +172,6 @@ def get_harbor_images():
                                 # "project": project_name
                             })
 
-
                 except requests.exceptions.HTTPError as e_artifact:
                     # Specifically catch 404 for artifacts if a repository is empty, log and continue
                     if e_artifact.response.status_code == 404:
@@ -190,6 +191,7 @@ def get_harbor_images():
     except Exception as e:
         app.logger.error(f"An unexpected error occurred: {str(e)}")
         return jsonify({"error": "An unexpected error occurred", "details": str(e)}), 500
+
 
 if __name__ == '__main__':
     # For production, use a proper WSGI server like Gunicorn.

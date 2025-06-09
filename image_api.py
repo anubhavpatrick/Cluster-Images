@@ -19,6 +19,7 @@ import os
 # Get module logger
 logger = logging.getLogger(__name__) #get logger for this module 
 
+
 def load_ignored_image_ids(filepath):
     """Loads image IDs from the CSV ignore file.
     
@@ -77,6 +78,7 @@ def load_ignored_image_ids(filepath):
         logger.error(f"Error reading or parsing CSV ignore file {filepath}: {e}")
     
     return ids_to_ignore
+
 
 def parse_crictl_images_output(output, ignored_image_ids=None):
     """

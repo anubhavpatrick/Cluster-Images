@@ -60,7 +60,14 @@ DEFAULT_CONFIG = {
 CONFIG_FILE_PATH = 'config.json'
 
 def setup_logging(config):
-    """Setup unified logging for the entire application."""
+    """Setup unified logging for the entire application.
+    
+    Args:
+        config: Configuration dictionary
+    
+    Returns:
+        None
+    """
     # Get the root logger
     root_logger = logging.getLogger()
     
@@ -99,8 +106,17 @@ def setup_logging(config):
     logger = logging.getLogger(__name__)
     logger.info('Unified logging configured for all components')
 
+
 def load_config(defaults, filepath):
-    """Load configuration from file with defaults."""
+    """Load configuration from file with defaults.
+    
+    Args:
+        defaults: Default configuration dictionary
+        filepath: Path to the configuration file
+    
+    Returns:
+        config: Configuration dictionary
+    """
     config = defaults.copy()
     try:
         with open(filepath, 'r') as f:
@@ -114,11 +130,18 @@ def load_config(defaults, filepath):
         app.logger.warning(f"Error loading config from {filepath}: {e}. Using defaults.")
     return config
 
+
 @app.route('/images', methods=['GET'])
 def get_all_images():
     """
     Get images from both local containerd and Harbor registry.
     Returns a combined list of images with their source specified.
+
+    Args:
+        None
+    
+    Returns:
+        result: Dictionary containing images and errors
     """
     logger = logging.getLogger(__name__)
     result = {
@@ -220,7 +243,17 @@ def get_all_images():
 
     return jsonify(result)
 
+
 def main():
+    """
+    Main function to start the Flask application.
+    
+    Args:
+        None
+    
+    Returns:
+        None
+    """
     # Load configuration
     app.config['APP_SETTINGS'] = load_config(DEFAULT_CONFIG, CONFIG_FILE_PATH)
     
@@ -244,6 +277,7 @@ def main():
         port=app.config['APP_SETTINGS']['app_config']['port'],
         debug=app.config['APP_SETTINGS']['app_config']['debug']
     )
+
 
 if __name__ == '__main__':
     main() 
