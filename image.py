@@ -21,7 +21,7 @@ from flask import Flask, jsonify
 import logging
 from logging.handlers import RotatingFileHandler
 import json
-import os
+import humanize
 
 # Import the API modules
 from image_api import parse_crictl_images_output, load_ignored_image_ids
@@ -178,13 +178,19 @@ def get_all_images():
                 )
 
                 for repo in repositories:
-                    repo_name = repo['name']
+                    repo_name = repo['name'] # only consider after the last /
+                    repo_name = repo_name.split('/')[-1]
+                    logger.info(f"Getting artifacts for {repo_name}")
                     artifacts_url = f"{harbor_cfg['url'].rstrip('/')}/api/v2.0/projects/{project_name}/repositories/{repo_name}/artifacts"
                     artifacts = get_harbor_paginated_results(
                         artifacts_url,
                         auth,
                         verify_ssl=harbor_cfg['verify_ssl']
                     )
+
+                    #convert artifact size to human readable format from bytes to MB or GB
+                    for artifact in artifacts:
+                        artifact['size'] = humanize.naturalsize(artifact['size'])
 
                     for artifact in artifacts:
                         if 'tags' in artifact and artifact['tags']:
