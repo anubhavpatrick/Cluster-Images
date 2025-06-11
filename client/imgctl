@@ -1,0 +1,194 @@
+#!/bin/bash
+
+# Created by:
+#   - Anubhav Patrick
+#   - anubhav.patrick@giindia.com
+#   - 11th June 2025
+
+# Configuration
+DEFAULT_SERVER="http://10.141.0.2:5375"
+CONFIG_DIR="/etc/imgctl"
+SYSTEM_CONFIG_FILE="${CONFIG_DIR}/config"
+USER_CONFIG_DIR="${HOME}/.config/imgctl"
+USER_CONFIG_FILE="${USER_CONFIG_DIR}/config"
+
+
+# Load server configuration
+load_server_config() {
+    # First try user config
+    if [ -f "$USER_CONFIG_FILE" ]; then
+        SERVER=$(grep "^server=" "$USER_CONFIG_FILE" | cut -d'=' -f2)
+    # Then try system config
+    elif [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        SERVER=$(grep "^server=" "$SYSTEM_CONFIG_FILE" | cut -d'=' -f2)
+    # Fall back to default
+    else
+        SERVER="$DEFAULT_SERVER"
+    fi
+}
+
+
+# Format JSON output using either jq (if available) or python (as fallback)
+format_json() {
+    if command -v jq >/dev/null 2>&1; then
+        jq '.'
+    else
+        python3 -m json.tool
+    fi
+}
+
+
+# Format table output
+format_table() {
+    local source=$1 # local, harbor, or empty (both)
+    local json_data
+
+    # Read JSON from stdin
+    json_data=$(cat)
+
+    # Function to print a line of dashes
+    print_separator() {
+        printf '%0.s-' {1..95}
+        echo
+    }
+
+    # Display local containerd images in a formatted table
+    if [ "$source" = "local" ] || [ -z "$source" ]; then
+        echo "Local Containerd Images:"
+        printf "%-50s %-20s %-15s %-10s\n" "REPOSITORY" "TAG" "IMAGE ID" "SIZE"
+        print_separator
+        echo "$json_data" | jq -r '.containerd_images[] | [.repository, .tag, .image_id[0:12], .size] | @tsv' | \
+            while IFS=$'\t' read -r repo tag id size; do
+                printf "%-50s %-20s %-15s %-10s\n" "$repo" "$tag" "$id" "$size"
+            done
+    fi
+
+    # Display Harbor registry images in a formatted table
+    if [ "$source" = "harbor" ] || [ -z "$source" ]; then
+        [ -z "$source" ] && echo -e "\n"  # Add spacing between tables if showing both
+        echo "Harbor Registry Images:"
+        printf "%-50s %-20s %-15s %-10s\n" "REPOSITORY" "TAG" "DIGEST" "SIZE"
+        print_separator
+        echo "$json_data" | jq -r '.harbor_images[] | [.repository, .tag, .digest[0:12], .size] | @tsv' | \
+            while IFS=$'\t' read -r repo tag digest size; do
+                printf "%-50s %-20s %-15s %-10s\n" "$repo" "$tag" "$digest" "$size"
+            done
+    fi
+}
+
+
+# Show usage information
+show_usage() {
+    cat << EOF
+Usage: imgctl COMMAND [OPTIONS]
+
+Commands:
+    get [local|harbor]     Get container images (default: all)
+        Options:
+            -o, --output FORMAT    Output format: json|table (default: table)
+    
+    config                 Manage configuration
+        Options:
+            --server URL           Set server URL
+    
+    help                   Show this help message
+
+Examples:
+    imgctl get                    # Get all images
+    imgctl get local              # Get only local containerd images
+    imgctl get harbor             # Get only Harbor registry images
+    imgctl get -o json            # Get all images in JSON format
+    imgctl config --server http://new.server:5000   # Set server URL
+EOF
+}
+
+
+# Handle get command
+handle_get() {
+    local source=""
+    local output="table"
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            local|harbor)
+                source="$1"
+                shift # Move to next argument
+                ;;
+            -o|--output)
+                output="$2"
+                shift 2 # Move to next argument
+                ;;
+            *)
+                echo "Error: Unknown option $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Load server configuration
+    load_server_config
+    
+    # Make API request
+    local response
+    response=$(curl -s "${SERVER}/images")
+    
+    # Check if curl request was successful
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to connect to server ${SERVER}" >&2
+        exit 1
+    fi
+    
+    # Output based on format
+    if [ "$output" = "json" ]; then
+        echo "$response" | format_json
+    else
+        echo "$response" | format_table "$source"
+    fi
+}
+
+
+# Handle config command
+handle_config() {
+    if [ "$1" = "--server" ]; then
+        if [ -z "$2" ]; then
+            echo "Error: Server URL required"
+            exit 1
+        fi
+        
+        # Create user config directory if it doesn't exist
+        mkdir -p "$USER_CONFIG_DIR"
+        echo "server=$2" > "$USER_CONFIG_FILE"
+        echo "Server permanently configured to: $2 for user $USER"
+        echo "To change the server, run: imgctl config --server http://new.server:<port>"
+        echo "To delete the server, run: rm -f $USER_CONFIG_FILE"
+    else
+        echo "Error: Unknown config option"
+        show_usage
+        exit 1
+    fi
+}
+
+
+# Main command processing
+case $1 in
+    get)
+        shift
+        handle_get "$@"
+        ;;
+    config)
+        shift
+        handle_config "$@"
+        ;;
+    help|--help|-h)
+        show_usage
+        ;;
+    *)
+        if [ -n "$1" ]; then
+            echo "Error: Unknown command '$1'"
+        fi
+        show_usage
+        exit 1
+        ;;
+esac

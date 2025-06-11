@@ -24,8 +24,8 @@ import json
 import humanize
 
 # Import the API modules
-from image_api import parse_crictl_images_output, load_ignored_image_ids
-from harbor_api import get_harbor_paginated_results
+from .image_api import parse_crictl_images_output, load_ignored_image_ids
+from .harbor_image_api import get_harbor_paginated_results
 import subprocess
 from requests.auth import HTTPBasicAuth
 
@@ -130,6 +130,15 @@ def load_config(defaults, filepath):
         app.logger.warning(f"Error loading config from {filepath}: {e}. Using defaults.")
     return config
 
+
+# --- Application Initialization ---
+# This setup code is now at the global scope, so it will be executed when
+# Gunicorn imports this file. This resolves the KeyError.
+app_settings = load_config(DEFAULT_CONFIG, CONFIG_FILE_PATH)
+setup_logging(app_settings)
+app.config['APP_SETTINGS'] = app_settings
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = app_settings['app_config']['jsonify_prettyprint_regular']
+# --- End Initialization ---
 
 @app.route('/images', methods=['GET'])
 def get_all_images():
@@ -254,16 +263,8 @@ def main():
     Returns:
         None
     """
-    # Load configuration
-    app.config['APP_SETTINGS'] = load_config(DEFAULT_CONFIG, CONFIG_FILE_PATH)
-    
-    # Setup unified logging
-    setup_logging(app.config['APP_SETTINGS'])
-    
-    # Configure Flask app
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = app.config['APP_SETTINGS']['app_config']['jsonify_prettyprint_regular']
-    
-    # Start the server
+    # The main function is now only used for development mode (running with 'python image.py')
+    # All critical setup has been moved to the global scope.
     logger = logging.getLogger(__name__)
     logger.info(
         f"Starting Unified Image API on "
