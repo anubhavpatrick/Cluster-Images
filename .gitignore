@@ -74,3 +74,6 @@ crictl_api.log
 # Secrets - example, uncomment and modify if you have local secret files
 # .env
 # secrets.json 
+
+# Remove __init__.py files
+__init__.py
