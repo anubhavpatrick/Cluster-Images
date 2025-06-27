@@ -8,6 +8,10 @@
 -   `jq`: For parsing and formatting JSON data. The install script will attempt to install this if it's missing.
 
 ## Installation
+Give execution permission to install.sh
+```bash
+chmod +x install.sh
+```
 
 An installation script, `install.sh`, is provided to simplify setup.
 
