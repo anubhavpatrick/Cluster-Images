@@ -41,9 +41,12 @@ HARBOR_USERNAME = os.environ.get("HARBOR_USERNAME", "testing")
 HARBOR_PASSWORD = os.environ.get("HARBOR_PASSWORD", "Test@123")
 # For local/internal Harbor instances that might use self-signed certificates
 HARBOR_VERIFY_SSL = os.environ.get("HARBOR_VERIFY_SSL", "false").lower() == "true"
+# Disable SSL verification if HARBOR_VERIFY_SSL is false
+if not HARBOR_VERIFY_SSL:
+    requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 
-def get_harbor_paginated_results(url, auth, params=None):
+def get_harbor_paginated_results(url, auth, params=None, verify_ssl=None):
     """
     Fetches all results from a paginated Harbor API endpoint.
     """
@@ -53,11 +56,14 @@ def get_harbor_paginated_results(url, auth, params=None):
     if params is None:
         params = {}
     
+    # Use the passed verify_ssl parameter, or fall back to the global setting
+    ssl_verify = verify_ssl if verify_ssl is not None else HARBOR_VERIFY_SSL
+    
     while True:
         params['page'] = page
         params['page_size'] = page_size
         try:
-            response = requests.get(url, auth=auth, params=params, verify=HARBOR_VERIFY_SSL)
+            response = requests.get(url, auth=auth, params=params, verify=ssl_verify)
             response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
             current_page_data = response.json()
             if not current_page_data:
