@@ -20,7 +20,7 @@ WorkingDirectory=/root/Cluster-Images/server
 # The command to start Gunicorn
 # It should point to the gunicorn in your virtualenv and the Flask app object
 # The module is now app.image, and the Flask instance is 'app' inside it.
-ExecStart=/root/Cluster-Images/server/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app.image:app
+ExecStart=/root/Cluster-Images/server/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5375 app.image:app
 
 # Optional: If your virtual environment isn't activated by ExecStart directly,
 # or if Gunicorn/Python needs other environment variables.
